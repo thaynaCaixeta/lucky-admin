@@ -1,10 +1,5 @@
 # Lucky-Admin
 
-## 📌 Project Overview
-Lucky admin is a web application that allows clients to place bets on draws and enables administrators to manage draws, games, track payments, and generate winner reports.
-
----
-
 ## 🚀 Functional Requirements (Beta) 
 
 ### 🔐 Authentication & Authorization
@@ -38,4 +33,3 @@ Lucky admin is a web application that allows clients to place bets on draws and 
 ## 📌 MVP Assumptions
 
 - All bet payments are handled in person — no online payment integration is required in the MVP.
-
