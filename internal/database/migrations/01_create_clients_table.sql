@@ -3,7 +3,7 @@
 CREATE TABLE clients (
     id UUID PRIMARY KEY,
     fullName TEXT NOT NULL,
-    birth_date TIMESTAMP NOT NULL,
+    birth_date DATE NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 

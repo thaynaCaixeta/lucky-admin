@@ -6,6 +6,7 @@ const (
 	OnGoing GameStatus = iota
 	Completed
 	Cancelled
+	Unknow
 )
 
 func (s GameStatus) String() string {

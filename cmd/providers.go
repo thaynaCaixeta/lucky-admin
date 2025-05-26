@@ -9,8 +9,12 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/thaynaCaixeta/lucky-admin/internal/config"
 	postgres "github.com/thaynaCaixeta/lucky-admin/internal/database"
-	"github.com/thaynaCaixeta/lucky-admin/internal/database/migrations"
+	migrations "github.com/thaynaCaixeta/lucky-admin/internal/database/migrations"
+
+	"github.com/thaynaCaixeta/lucky-admin/internal/handler"
+	repo "github.com/thaynaCaixeta/lucky-admin/internal/repository"
 	server "github.com/thaynaCaixeta/lucky-admin/internal/server"
+	"github.com/thaynaCaixeta/lucky-admin/internal/service"
 )
 
 func provideAppConfig() config.AppConfig {
@@ -25,13 +29,21 @@ func provideHttpServerConfig(cfg config.AppConfig) config.ServerConfig {
 	return cfg.ServerConfig
 }
 
-func provideDBConnection(cfg config.PostgresConfig) (*sqlx.DB, error) {
+func provideRepository(cfg config.PostgresConfig) (repo.Repository, error) {
+	conn, err := _provideDBConnection(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return repo.NewRepository(conn), nil
+}
+
+func _provideDBConnection(cfg config.PostgresConfig) (*sqlx.DB, error) {
 	db, err := postgres.Connect(cfg)
 	if err != nil {
 		return nil, err
 	}
-	mg := migrations.GetMigrationSource()
-	_, err = migrate.Exec(db.DB, "postgres", mg, migrate.Up)
+	mgs := migrations.GetMigrationSource()
+	_, err = migrate.Exec(db.DB, "postgres", *mgs, migrate.Up)
 	if err != nil {
 		return nil, fmt.Errorf("migrations execution failed: %v", err)
 	}
@@ -39,20 +51,28 @@ func provideDBConnection(cfg config.PostgresConfig) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func provideHTTPServer(cfg config.ServerConfig) server.Server {
-	return server.NewServer(cfg)
+func provideGameService(repo repo.Repository) service.GameService {
+	return service.NewGameService(repo)
+}
+
+func provideGameHandler(gameSvc service.GameService) handler.GameHandler {
+	return handler.NewGameHandler(gameSvc)
+}
+
+func provideHTTPServer(cfg config.ServerConfig, gameHandler handler.GameHandler) server.Server {
+	return server.NewServer(cfg, gameHandler)
 }
 
 type app struct {
 	cfg    config.AppConfig
-	db     *sqlx.DB
+	repo   repo.Repository
 	server server.Server
 }
 
-func NewApp(cfg config.AppConfig, db *sqlx.DB, server server.Server) Application {
+func NewApp(cfg config.AppConfig, repo repo.Repository, server server.Server) Application {
 	return &app{
 		cfg:    cfg,
-		db:     db,
+		repo:   repo,
 		server: server,
 	}
 }
@@ -62,5 +82,5 @@ func (a *app) Run() {
 	if err != nil {
 		log.Fatalf("failed listening on http server: %v", err)
 	}
-	defer a.db.Close()
+	defer a.repo.CloseConnection()
 }

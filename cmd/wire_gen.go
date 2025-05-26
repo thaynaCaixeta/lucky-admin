@@ -15,12 +15,14 @@ import (
 func injectAppDependencies() (Application, error) {
 	appConfig := provideAppConfig()
 	postgresConfig := providePostgresConfig(appConfig)
-	db, err := provideDBConnection(postgresConfig)
+	repository, err := provideRepository(postgresConfig)
 	if err != nil {
 		return nil, err
 	}
 	serverConfig := provideHttpServerConfig(appConfig)
-	server := provideHTTPServer(serverConfig)
-	application := NewApp(appConfig, db, server)
+	gameService := provideGameService(repository)
+	gameHandler := provideGameHandler(gameService)
+	server := provideHTTPServer(serverConfig, gameHandler)
+	application := NewApp(appConfig, repository, server)
 	return application, nil
 }
