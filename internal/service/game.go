@@ -2,8 +2,10 @@ package service
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/thaynaCaixeta/lucky-admin/internal/domain"
 	"github.com/thaynaCaixeta/lucky-admin/internal/repository"
 )
@@ -24,14 +26,20 @@ func NewGameService(repo repository.Repository) GameService {
 
 func (s *gameSvc) CreateNewGame(numRounds int, closesAt time.Time, createdBy string) (*domain.Game, error) {
 	if closesAt.Before(time.Now().UTC()) {
-		return nil, fmt.Errorf("the game closes date must be after the current date")
+		return nil, huma.NewError(
+			http.StatusBadRequest,
+			"invalid_close_date",
+			fmt.Errorf("the game closes date must be after the current date"),
+		)
 	}
 	stored, err := s.repo.SaveGame(numRounds, closesAt, createdBy)
 	if err != nil {
+		// The errors are already being handled in the repository layer
 		return nil, err
 	}
 	if stored == nil {
-		return nil, fmt.Errorf("the repo returned nil when saving a new game in the database")
+		// Fallback
+		return nil, CreateNewGameFailure()
 	}
 	return stored, nil
 }
