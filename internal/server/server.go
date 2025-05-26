@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/thaynaCaixeta/lucky-admin/internal/config"
-	handlers "github.com/thaynaCaixeta/lucky-admin/internal/http"
+	handlers "github.com/thaynaCaixeta/lucky-admin/internal/handler"
 )
 
 type Server interface {
@@ -20,21 +20,23 @@ type Server interface {
 }
 
 type httpServer struct {
-	cfg    config.ServerConfig
-	router *chi.Mux
+	cfg         config.ServerConfig
+	router      *chi.Mux
+	gameHandler handlers.GameHandler
 }
 
-func NewServer(cfg config.ServerConfig) Server {
+func NewServer(cfg config.ServerConfig, gameHandler handlers.GameHandler) Server {
 	return &httpServer{
-		cfg:    cfg,
-		router: chi.NewMux(),
+		cfg:         cfg,
+		router:      chi.NewMux(),
+		gameHandler: gameHandler,
 	}
 }
 
 func (s *httpServer) Listen() error {
 	api := humachi.New(s.router, huma.DefaultConfig("Lucky-Admin API", "1.0.0"))
 	// Register endpoints handler
-	handlers.RegisterEndpoints(api)
+	s.gameHandler.RegisterGameEndpoints(api)
 
 	if s.cfg.Addr == "" || s.cfg.Port == "" {
 		return errors.New("warning: server address or port not configured properly")

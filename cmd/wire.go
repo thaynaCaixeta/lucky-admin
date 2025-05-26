@@ -12,8 +12,10 @@ func injectAppDependencies() (Application, error) {
 		provideAppConfig,
 		providePostgresConfig,
 		provideHttpServerConfig,
-		provideDBConnection,
+		provideRepository,
 		provideHTTPServer,
+		provideGameService,
+		provideGameHandler,
 		NewApp,
 	)
 

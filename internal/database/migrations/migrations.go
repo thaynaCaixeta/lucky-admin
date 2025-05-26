@@ -1,4 +1,4 @@
-package migrations
+package database
 
 import (
 	"embed"
@@ -7,12 +7,14 @@ import (
 )
 
 // FS contains the migration files
-var FS embed.FS
+//
+//go:embed *.sql
+var dbMigrations embed.FS
 
 // GetMigrationSource returns the migration source.
 func GetMigrationSource() *migrate.EmbedFileSystemMigrationSource {
 	return &migrate.EmbedFileSystemMigrationSource{
-		FileSystem: FS,
+		FileSystem: dbMigrations,
 		Root:       ".",
 	}
 }

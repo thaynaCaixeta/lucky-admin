@@ -34,4 +34,8 @@ clean:
 # Default target
 all: build
 
+run-dev-all: docker-down docker-up clean build run
+
 run-dev: clean build run
+
+reset-db-dev: docker-down docker-up
