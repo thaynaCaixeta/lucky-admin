@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 )
 
 func main() {
-	app, err := injectAppDependencies()
+	ctx := context.Background()
+	app, err := injectAppDependencies(ctx)
 	if err != nil {
 		log.Fatalf("Failed to init app: %v", err)
 	}

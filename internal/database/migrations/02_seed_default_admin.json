@@ -1,0 +1,10 @@
+[
+    {
+    "PK": { "S": "ADMIN#8e52f943-5106-4622-b0c2-569f2f2b51a4" },
+    "SK": { "S": "METADATA" },
+    "username": { "S": "admin" },
+    "pass": { "S": "1fG5oBZCP8Xp" },
+    "created_at": { "S": "2025-04-20T07:20:50.52Z" },
+    "is_active": { "BOOL": true }
+  }
+]

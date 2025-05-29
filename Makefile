@@ -1,8 +1,10 @@
 # Configuration
 BINARY_NAME=bin/lucky-admin
 MAIN_PKG=cmd
+SEED_SCRIPT=internal/database/migrations/init.sh
 
-.PHONY: docker-up docker-down docker-logs wire build clean run all
+.PHONY: docker-up docker-down docker-logs wire build clean run all \
+        seed-local-db reset-local-db run-dev run-dev-all
 
 # Docker commands
 docker-up:
@@ -32,10 +34,26 @@ clean:
 	find . -name 'wire_gen.go' -delete
 
 # Default target
-all: build
-
-run-dev-all: docker-down docker-up clean build run
-
 run-dev: clean build run
 
-reset-db-dev: docker-down docker-up
+run-dev-all: reset-local-db clean build run
+
+# Full DB Reset + Seed
+reset-local-db: docker-down docker-clean docker-up seed-local-db
+
+# Stop and remove Docker containers
+docker-down:
+	docker-compose -f docker-compose-local.yml down
+
+# Remove persisted DynamoDB volumes
+docker-clean:
+	rm -rf ./data/dynamodb
+
+# Start up Docker containers with fresh volume
+docker-up:
+	docker-compose -f docker-compose-local.yml up -d
+
+# Seed DynamoDB local with structure and test data
+seed-local-db:
+	@echo "Seeding DynamoDB Local..."
+	@./$(SEED_SCRIPT)

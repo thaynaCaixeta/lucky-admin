@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -15,38 +16,42 @@ const (
 	defaultAddr = "localhost"
 	addrKey     = "SERVER_ADDR"
 
-	// Postgres config default values and keys
-	defaultDbUser = "lucky-admin-api"
-	dbUserKey     = "DB_USER"
+	// DynamoDB config default values and keys
+	localEndpointKey     = "DYNAMO_LOCAL_ENDPOINT"
+	defaultLocalEndpoint = "http://localhost:8000"
 
-	defaultDbPass = "123456"
-	dbPassKey     = "DB_PASSWORD"
+	localRegionKey     = "DYNAMO_LOCAL_REGION"
+	defaultLocalRegion = "us-west-2"
 
-	defaultDbHost = "localhost"
-	dbHostKey     = "DB_HOST"
+	tableNameKey     = "DYNAMO_TABLE_NAME"
+	defaultTableName = "GameSystem"
 
-	defaultDbPort = "5432"
-	dbPortKey     = "DB_PORT"
+	awsAccessKeyId_Key    = "AWS_ACCESS_KEY_ID"
+	defaultAwsAccessKeyId = "your_key"
 
-	defaultDbName = "lucky-admin"
-	dbNameKey     = "DB_NAME"
+	awsSecretAccessKey_Key    = "AWS_SECRET_ACCESS_KEY"
+	defaultAwsSecretAccessKey = "your_secret"
 
-	defaultDbSSLMode = "disable"
-	dbSSLModeKey     = "DB_SSLMODE"
+	awsRegionKey        = "AWS_REGION"
+	defaultAwsRegionKey = "us-east-1"
+
+	useLocalDB        = "USE_LOCAL_DYNAMO"
+	defaultUseLocalDB = true
 )
 
 type AppConfig struct {
-	PostgresConfig PostgresConfig
-	ServerConfig   ServerConfig
+	DynamoConfig DynamoDBConfig
+	ServerConfig ServerConfig
 }
 
-type PostgresConfig struct {
-	User     string
-	Password string
-	Host     string
-	Port     string
-	Name     string
-	SslMode  string
+type DynamoDBConfig struct {
+	LocalEndpoint      string
+	LocalRegion        string
+	TableName          string
+	AwsAccessKeyId     string
+	AwsSecretAccessKey string
+	AwsRegion          string
+	UseLocalDB         bool
 }
 
 type ServerConfig struct {
@@ -58,13 +63,14 @@ func NewAppConfig() AppConfig {
 	loadEnvConfig()
 
 	return AppConfig{
-		PostgresConfig: PostgresConfig{
-			User:     getEnvOrDefaultAsString(defaultDbUser, dbUserKey),
-			Password: getEnvOrDefaultAsString(defaultDbPass, dbPassKey),
-			Host:     getEnvOrDefaultAsString(defaultDbHost, dbHostKey),
-			Port:     getEnvOrDefaultAsString(defaultDbPort, dbPortKey),
-			Name:     getEnvOrDefaultAsString(defaultDbName, dbNameKey),
-			SslMode:  getEnvOrDefaultAsString(defaultDbSSLMode, dbSSLModeKey),
+		DynamoConfig: DynamoDBConfig{
+			LocalEndpoint:      getEnvOrDefaultAsString(defaultLocalEndpoint, localEndpointKey),
+			LocalRegion:        getEnvOrDefaultAsString(defaultLocalRegion, localRegionKey),
+			TableName:          getEnvOrDefaultAsString(defaultTableName, tableNameKey),
+			AwsAccessKeyId:     getEnvOrDefaultAsString(defaultAwsAccessKeyId, awsAccessKeyId_Key),
+			AwsSecretAccessKey: getEnvOrDefaultAsString(defaultAwsSecretAccessKey, awsSecretAccessKey_Key),
+			AwsRegion:          getEnvOrDefaultAsString(defaultAwsRegionKey, awsRegionKey),
+			UseLocalDB:         getEnvOrDefaultAsBool(defaultUseLocalDB, useLocalDB),
 		},
 		ServerConfig: ServerConfig{
 			Addr: getEnvOrDefaultAsString(defaultAddr, addrKey),
@@ -87,19 +93,11 @@ func getEnvOrDefaultAsString(defValue, key string) string {
 	return envValue
 }
 
-/* func getEnvOrDefaultAsInt(defValue, key string) int {
+func getEnvOrDefaultAsBool(defValue bool, key string) bool {
 	envValue := os.Getenv(key)
-	if envValue == "" {
-		return toInt(defValue)
+	boolValue, err := strconv.ParseBool(key)
+	if envValue == "" || err != nil {
+		return defValue
 	}
-	return toInt(envValue)
+	return boolValue
 }
-
-func toInt(value string) int {
-	intValue, err := strconv.Atoi(value)
-	if err != nil {
-		//TODO handle error properly to avoid crash
-		log.Fatalf("Error while parsing .env configs: %v", err)
-	}
-	return intValue
-} */

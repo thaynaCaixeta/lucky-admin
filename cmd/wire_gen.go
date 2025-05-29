@@ -7,22 +7,27 @@
 package main
 
 import (
+	"context"
+)
+
+import (
 	_ "github.com/danielgtaylor/huma/v2/formats/cbor"
 )
 
 // Injectors from wire.go:
 
-func injectAppDependencies() (Application, error) {
+func injectAppDependencies(ctx context.Context) (Application, error) {
 	appConfig := provideAppConfig()
-	postgresConfig := providePostgresConfig(appConfig)
-	repository, err := provideRepository(postgresConfig)
+	serverConfig := provideHttpServerConfig(appConfig)
+	dynamoDBConfig := provideDynamoConfig(appConfig)
+	client, err := provideDynamoClient(ctx, dynamoDBConfig)
 	if err != nil {
 		return nil, err
 	}
-	serverConfig := provideHttpServerConfig(appConfig)
-	gameService := provideGameService(repository)
+	repository := provideRepository(client)
+	gameService := provideGameService(ctx, repository)
 	gameHandler := provideGameHandler(gameService)
 	server := provideHTTPServer(serverConfig, gameHandler)
-	application := NewApp(appConfig, repository, server)
+	application := NewApp(appConfig, server)
 	return application, nil
 }
