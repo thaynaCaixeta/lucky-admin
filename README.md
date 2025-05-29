@@ -36,7 +36,7 @@
 
 ## Database
 
-### ☁️ DynamoDB Table Structure 
+### ☁️ DynamoDB Table Structure
 
 
 | **Partition Key (PK)** | **Sort Key (SK)**                   | **Item Type**  |
@@ -57,6 +57,7 @@
 **💵 Note:** The data duplication will help to optimize the storage costs.
 
 #### 🔆 NoSQL principles considered for the table design
+
 | Principle                      | Description                                                                 |
 |-------------------------------|-----------------------------------------------------------------------------|
 | Access-Pattern First Design   | Model based on what you query, not what you store                          |
@@ -76,6 +77,32 @@
   "fullName": "Alice",
   "birth_date": "1990-01-01",
   "created_at": "2025-01-01T00:00:00Z"
+}
+```
+
+**Admin Item** 
+
+```
+{
+  "PK": "ADMIN#456",
+  "SK": "METADATA",
+  "username": "Alice",
+  "pass": "1990-01-01",
+  "created_at": "2025-01-01T00:00:00Z",
+  "is_active": true
+}
+```
+
+**Game Item** 
+
+```
+{
+  "PK": "GAME#473",
+  "SK": "METADATA",
+  "username": "Alice",
+  "pass": "1990-01-01",
+  "created_at": "2025-01-01T00:00:00Z",
+  "is_active": true
 }
 ```
 

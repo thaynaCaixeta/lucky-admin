@@ -25,7 +25,7 @@ func NewGameHandler(svc service.GameService) GameHandler {
 
 func (h *gameHandler) RegisterGameEndpoints(api huma.API) {
 	huma.Post(api, "/game", func(ctx context.Context, req *types.NewGameRequest) (*types.NewGameResponse, error) {
-		stored, err := h.svc.CreateNewGame(req.Body.NumRounds, req.Body.ClosesAt, req.Body.CreatedBy)
+		stored, err := h.svc.StartNewGame(req.Body.NumRounds, req.Body.ClosesAt, req.Body.CreatedBy)
 		if err != nil {
 			return nil, err
 		}

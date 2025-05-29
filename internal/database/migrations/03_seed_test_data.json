@@ -1,0 +1,38 @@
+[
+  {
+    "PK": { "S": "CLIENT#123" },
+    "SK": { "S": "METADATA" },
+    "fullName": { "S": "Alice" },
+    "birth_date": { "S": "1990-01-01" },
+    "created_at": { "S": "2025-01-01T00:00:00Z" }
+  },
+  {
+    "PK": { "S": "CLIENT#123" },
+    "SK": { "S": "BET#game1#round2#bet789" },
+    "round_id": { "S": "round2" },
+    "game_id": { "S": "game1" },
+    "numbers": { "L": [ { "N": "5" }, { "N": "9" }, { "N": "22" } ] },
+    "hits": { "N": "2" },
+    "payment_status": { "S": "PAID" }
+  },
+  {
+    "PK": { "S": "GAME#game1" },
+    "SK": { "S": "ROUND#round2" },
+    "round_id": { "S": "round2" },
+    "numbers": { "L": [ { "N": "5" }, { "N": "9" }, { "N": "22" } ] }
+  },
+  {
+    "PK": { "S": "ROUND#round2" },
+    "SK": { "S": "BET#bet789" },
+    "client_id": { "S": "123" },
+    "numbers": { "L": [ { "N": "5" }, { "N": "9" }, { "N": "22" } ] },
+    "hits": { "N": "2" },
+    "payment_status": { "S": "PAID" }
+  },
+  {
+    "PK": { "S": "GAME#game1" },
+    "SK": { "S": "BET#round2#bet789" },
+    "client_id": { "S": "123" },
+    "hits": { "N": "2" }
+  }
+]

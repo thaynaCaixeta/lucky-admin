@@ -1,99 +1,115 @@
 package repository
 
 import (
-	"log"
+	"context"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 	"github.com/thaynaCaixeta/lucky-admin/internal/domain"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	dynamodbTypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type Repository interface {
-	SaveGame(numRounds int, closesAt time.Time, createdBy string) (*domain.Game, error)
-	CloseConnection()
+	SaveGame(ctx context.Context, numRounds int, closesAt time.Time, createdBy string) (*domain.Game, error)
 }
 
 type repo struct {
-	conn *sqlx.DB
+	cli *dynamodb.Client
 }
 
-func NewRepository(conn *sqlx.DB) Repository {
+func NewRepository(cli *dynamodb.Client) Repository {
 	return &repo{
-		conn: conn,
+		cli: cli,
 	}
 }
 
-func (r *repo) CloseConnection() {
-	r.conn.Close()
+type GameItem struct {
+	PK               string `dynamodbav:"PK"`
+	SK               string `dynamodbav:"SK"`
+	Id               string `dynamodbav:"id"`
+	NumRounds        int    `dynamodbav:"num_rounds"`
+	CreatedAt        string `dynamodbav:"created_at"`
+	ClosesAt         string `dynamodbav:"closes_at"`
+	CompletionStatus string `dynamodbav:"completion_status"`
+	CreatedBy        string `dynamodbav:"created_by"`
 }
 
-func (r *repo) SaveGame(numRounds int, closesAt time.Time, createdBy string) (*domain.Game, error) {
-	tx, err := r.conn.Beginx()
-	if err != nil {
-		log.Printf("Failed to begin transaction: %v", err)
-		return nil, NewDatabaseError("failed to begin transaction", err)
-	}
-	defer func() {
-		if p := recover(); p != nil {
-			tx.Rollback()
-			panic(p)
-		}
-	}()
+type adminItem struct {
+	Id        string `dynamodbav:"id"`
+	Username  string `dynamodbav:"username"`
+	Password  string `dynamodbav:"pass"`
+	CreatedAt string `dynamodbav:"created_at"`
+	IsActive  bool   `dynamodbav:"is_active"`
+}
 
-	// Retrieve the admin id associated with the given username
-	stmt, err := tx.PrepareNamed("SELECT id FROM admins WHERE username = :created_by")
+func (r *repo) SaveGame(
+	ctx context.Context,
+	numRounds int,
+	closesAt time.Time,
+	createdBy string,
+) (*domain.Game, error) {
+	resp, err := r.cli.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String("GameSystem"),
+		IndexName:              aws.String("UsernameIndex"),
+		KeyConditionExpression: aws.String("username = :u"),
+		ExpressionAttributeValues: map[string]dynamodbTypes.AttributeValue{
+			":u": &dynamodbTypes.AttributeValueMemberS{Value: createdBy},
+		},
+		Limit: aws.Int32(1),
+	})
 	if err != nil {
-		log.Printf("Failed to prepare admin query: %v", err)
-		tx.Rollback()
-		return nil, NewDatabaseError("failed to prepare admin query", err)
+		return nil, NewDatabaseError("error while retrieving the admin from the database", err)
 	}
-	defer stmt.Close()
-
-	var adminId uuid.UUID
-	err = stmt.Get(&adminId, map[string]interface{}{"created_by": createdBy})
-	if err != nil {
-		log.Printf("Admin not found: %v", err)
-		tx.Rollback()
+	if len(resp.Items) == 0 {
 		return nil, NewAdminNotFoundError(createdBy)
 	}
+	// Unmarshal response
+	var admItem adminItem
+	if err = attributevalue.UnmarshalMap(resp.Items[0], &admItem); err != nil {
+		return nil, NewDatabaseError("failed to parse admin", err)
+	}
 
-	gameId, err := uuid.NewRandom()
+	createdAtAdm, err := time.Parse(time.RFC3339, admItem.CreatedAt)
 	if err != nil {
-		tx.Rollback()
-		return nil, NewUUIDGenerationError(err)
+		return nil, NewDatabaseError("invalid admin timestamp", err)
+	}
+	if !admItem.IsActive {
+		return nil, NewInvalidAdminError("admin is not active", err)
 	}
 
-	newGame := domain.NewGame(
-		gameId.String(),
-		numRounds,
-		time.Now().UTC(),
-		closesAt.UTC(),
-		domain.GameStatus(0),
-		adminId.String(),
-	)
-	_, err = tx.Exec(`
-		INSERT INTO games(id, num_rounds, created_at, closes_at, completion_status, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		newGame.Id,
-		newGame.NumRounds,
-		newGame.CreatedAt,
-		newGame.ClosesAt,
-		newGame.Status.String(),
-		newGame.CreatedBy,
-	)
+	// Generate a new game and save
+	gameId := uuid.New().String()
+	now := time.Now().UTC()
+
+	gameItem := GameItem{
+		PK:               "GAME#" + gameId,
+		SK:               "METADATA",
+		Id:               gameId,
+		NumRounds:        numRounds,
+		CreatedAt:        now.Format(time.RFC3339),
+		ClosesAt:         closesAt.Format(time.RFC3339),
+		CompletionStatus: domain.OnGoing.String(),
+		CreatedBy:        admItem.Username,
+	}
+
+	item, err := attributevalue.MarshalMap(gameItem)
 	if err != nil {
-		tx.Rollback()
-		log.Printf("Failed to insert game: %v", err)
-		return nil, NewDatabaseError("failed to insert game", err)
-	}
-	if err = tx.Commit(); err != nil {
-		log.Printf("Failed to commit transaction: %v", err)
-		return nil, NewTransactionCommitError(err)
+		return nil, NewDatabaseError("marshal to database structure failed", err)
 	}
 
-	// Set the username back before returning to keep the response consistency with the request
-	newGame.CreatedBy = createdBy
-	return &newGame, nil
+	_, err = r.cli.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String("GameSystem"),
+		Item:      item,
+	})
+	if err != nil {
+		return nil, NewDatabaseError("failed to save the game", err)
+	}
+
+	// Create the domain output to be returned
+	res := domain.NewGame(gameId, numRounds, createdAtAdm, closesAt, domain.OnGoing, admItem.Username)
+	return &res, nil
 }

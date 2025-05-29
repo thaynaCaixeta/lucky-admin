@@ -4,15 +4,18 @@
 package main
 
 import (
+	"context"
+
 	"github.com/google/wire"
 )
 
-func injectAppDependencies() (Application, error) {
+func injectAppDependencies(ctx context.Context) (Application, error) {
 	wire.Build(
 		provideAppConfig,
-		providePostgresConfig,
-		provideHttpServerConfig,
+		provideDynamoConfig,
+		provideDynamoClient,
 		provideRepository,
+		provideHttpServerConfig,
 		provideHTTPServer,
 		provideGameService,
 		provideGameHandler,

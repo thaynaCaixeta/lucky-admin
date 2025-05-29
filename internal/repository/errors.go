@@ -23,6 +23,14 @@ func NewAdminNotFoundError(username string) error {
 	)
 }
 
+func NewInvalidAdminError(detail string, err error) error {
+	return huma.NewError(
+		http.StatusBadRequest,
+		"invalid_admin_error",
+		fmt.Errorf("%s: %w", detail, err),
+	)
+}
+
 func NewUUIDGenerationError(err error) error {
 	return huma.NewError(
 		http.StatusInternalServerError,

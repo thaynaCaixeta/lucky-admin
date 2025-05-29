@@ -1,11 +1,12 @@
-version: '3'
+version: "3.8"
+
 services:
-  db:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_USER: lucky-admin-api
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: lucky-admin
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: lucky-admin-local
     ports:
-      - "5432:5432"
+      - "8000:8000"
+    volumes:
+      - ./data/dynamodb:/home/dynamodblocal/data
+    command: -jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data
+    restart: unless-stopped
